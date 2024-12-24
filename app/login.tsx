@@ -1,9 +1,12 @@
 import Colors from "@/constants/Colors";
+import { COUNTRY_CODE } from "@/constants/constants";
 import { defaultStyles } from "@/constants/Styles";
+import { isClerkAPIResponseError, useSignIn } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -21,10 +24,35 @@ enum SignInType {
 }
 
 const Login = () => {
-  const [countryCode, setCountryCode] = useState("+20");
+  const [countryCode, setCountryCode] = useState(COUNTRY_CODE);
   const [mobileNumber, setMobileNumber] = useState("");
 
-  const onSignIn = async (type: SignInType) => {};
+  const router = useRouter();
+  const { signIn } = useSignIn();
+
+  const onSignIn = async (type: SignInType) => {
+    try {
+      if (type === SignInType.Phone) {
+        const phoneNumber = `${countryCode}${mobileNumber}`;
+        const { supportedFirstFactors } = await signIn!.create({ identifier: phoneNumber });
+
+        const firstPhoneFactor = supportedFirstFactors.find((ele) => ele.strategy === "phone_code");
+
+        if (!firstPhoneFactor) return;
+
+        await signIn!.prepareFirstFactor({ strategy: "phone_code", phoneNumberId: firstPhoneFactor.phoneNumberId });
+
+        router.push({ pathname: "/verify/[phone]", params: { phone: phoneNumber, signin: "true" } });
+      }
+    } catch (error) {
+      console.error("error[onSignIn] ====>", JSON.stringify(error, null, 2));
+      if (isClerkAPIResponseError(error)) {
+        if (error.errors[0].code === "form_identifier_not_found") {
+          Alert.alert("Error", error.errors[0].message);
+        }
+      }
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -34,9 +62,7 @@ const Login = () => {
     >
       <View style={defaultStyles.container}>
         <Text style={defaultStyles.header}>Welcome Back</Text>
-        <Text style={defaultStyles.descriptionText}>
-          Enter phone number associated with your account
-        </Text>
+        <Text style={defaultStyles.descriptionText}>Enter phone number associated with your account</Text>
         {/* country code and mobile number input */}
         <View style={styles.inputContainer}>
           <TextInput
@@ -66,11 +92,7 @@ const Login = () => {
         <TouchableOpacity
           disabled={!mobileNumber}
           onPress={() => onSignIn(SignInType.Phone)}
-          style={[
-            defaultStyles.pillButton,
-            mobileNumber ? styles.enabled : styles.disabled,
-            { marginVertical: 20 },
-          ]}
+          style={[defaultStyles.pillButton, mobileNumber ? styles.enabled : styles.disabled, { marginVertical: 20 }]}
         >
           <Text style={defaultStyles.buttonText}>Login</Text>
         </TouchableOpacity>
@@ -106,9 +128,7 @@ const Login = () => {
           ]}
         >
           <Ionicons name="mail" size={24} color={Colors.black} />
-          <Text style={[defaultStyles.buttonText, { color: Colors.black }]}>
-            Continue with email
-          </Text>
+          <Text style={[defaultStyles.buttonText, { color: Colors.black }]}>Continue with email</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onSignIn(SignInType.Google)}
@@ -123,9 +143,7 @@ const Login = () => {
           ]}
         >
           <Ionicons name="logo-google" size={24} color={Colors.black} />
-          <Text style={[defaultStyles.buttonText, { color: Colors.black }]}>
-            Continue with google
-          </Text>
+          <Text style={[defaultStyles.buttonText, { color: Colors.black }]}>Continue with google</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onSignIn(SignInType.Apple)}
@@ -140,9 +158,7 @@ const Login = () => {
           ]}
         >
           <Ionicons name="logo-apple" size={24} color={Colors.black} />
-          <Text style={[defaultStyles.buttonText, { color: Colors.black }]}>
-            Continue with apple
-          </Text>
+          <Text style={[defaultStyles.buttonText, { color: Colors.black }]}>Continue with apple</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

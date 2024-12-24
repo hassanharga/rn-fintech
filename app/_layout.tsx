@@ -1,13 +1,48 @@
 import Colors from "@/constants/Colors";
+import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Link, Stack, useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { TouchableOpacity } from "react-native";
 import "react-native-reanimated";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
+export interface TokenCache {
+  getToken: (key: string) => Promise<string | undefined | null>;
+  saveToken: (key: string, token: string) => Promise<void>;
+  clearToken?: (key: string) => void;
+}
+
+const tokenCache: TokenCache = {
+  async getToken(key: string) {
+    try {
+      const item = await SecureStore.getItemAsync(key);
+      if (item) {
+        console.log(`${key} was used 🔐 \n`);
+      } else {
+        console.log("No values stored under key: " + key);
+      }
+      return item;
+    } catch (error) {
+      console.error("SecureStore get item error: ", error);
+      await SecureStore.deleteItemAsync(key);
+      return null;
+    }
+  },
+  async saveToken(key: string, value: string) {
+    try {
+      return SecureStore.setItemAsync(key, value);
+    } catch (err) {
+      return;
+    }
+  },
+};
 
 // Catch any errors thrown by the Layout component.
 export { ErrorBoundary } from "expo-router";
@@ -22,6 +57,7 @@ const InitialLayout = () => {
   });
 
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -34,16 +70,19 @@ const InitialLayout = () => {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    console.log("isSignedIn ====>", isSignedIn);
+  }, [isSignedIn]);
+
   if (!loaded) {
     return null;
   }
 
   return (
     <Stack>
-      <Stack.Screen
-        name="index"
-        options={{ headerShown: false }}
-      ></Stack.Screen>
+      {/* home */}
+      <Stack.Screen name="index" options={{ headerShown: false }}></Stack.Screen>
+      {/* signup */}
       <Stack.Screen
         name="signup"
         options={{
@@ -57,6 +96,7 @@ const InitialLayout = () => {
           ),
         }}
       ></Stack.Screen>
+      {/* login */}
       <Stack.Screen
         name="login"
         options={{
@@ -71,19 +111,27 @@ const InitialLayout = () => {
           headerRight: () => (
             <Link asChild href={"/help"}>
               <TouchableOpacity>
-                <Ionicons
-                  name="help-circle-outline"
-                  size={34}
-                  color={Colors.dark}
-                />
+                <Ionicons name="help-circle-outline" size={34} color={Colors.dark} />
               </TouchableOpacity>
             </Link>
           ),
         }}
       ></Stack.Screen>
+      {/* help */}
+      <Stack.Screen name="help" options={{ title: "Help", presentation: "modal" }}></Stack.Screen>
+      {/* verify */}
       <Stack.Screen
-        name="help"
-        options={{ title: "Help", presentation: "modal" }}
+        name="verify/[phone]"
+        options={{
+          headerTitle: "",
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: Colors.background },
+          headerLeft: () => (
+            <TouchableOpacity onPress={router.back}>
+              <Ionicons name="arrow-back" size={34} color={Colors.dark} />
+            </TouchableOpacity>
+          ),
+        }}
       ></Stack.Screen>
     </Stack>
   );
@@ -92,8 +140,13 @@ const InitialLayout = () => {
 const RootLayoutNav = () => {
   return (
     <>
-      <StatusBar style="light" />
-      <InitialLayout />
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          {/* <Slot /> */}
+          <StatusBar style="light" />
+          <InitialLayout />
+        </ClerkLoaded>
+      </ClerkProvider>
     </>
   );
 };

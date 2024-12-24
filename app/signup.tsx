@@ -1,8 +1,11 @@
 import Colors from "@/constants/Colors";
+import { COUNTRY_CODE } from "@/constants/constants";
 import { defaultStyles } from "@/constants/Styles";
-import { Link } from "expo-router";
+import { isClerkAPIResponseError, useSignUp } from "@clerk/clerk-expo";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -13,9 +16,27 @@ import {
 } from "react-native";
 
 const Signup = () => {
-  const [countryCode, setCountryCode] = useState("+20");
+  const [countryCode, setCountryCode] = useState(COUNTRY_CODE);
   const [mobileNumber, setMobileNumber] = useState("");
-  const onSignup = async () => {};
+
+  const router = useRouter();
+  const { signUp } = useSignUp();
+
+  const onSignup = async () => {
+    const phoneNumber = `${countryCode}${mobileNumber}`;
+    try {
+      await signUp!.create({ phoneNumber: phoneNumber });
+
+      await signUp?.preparePhoneNumberVerification();
+
+      router.push({ pathname: "/verify/[phone]", params: { phone: phoneNumber } });
+    } catch (error) {
+      console.error("error[onSignup] ====>", JSON.stringify(error, null, 2));
+      if (isClerkAPIResponseError(error)) {
+        Alert.alert("Error", error.errors[0].message);
+      }
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -48,20 +69,14 @@ const Signup = () => {
         </View>
         <Link asChild replace href="/login">
           <TouchableOpacity>
-            <Text style={defaultStyles.textLink}>
-              Already have an account? Login
-            </Text>
+            <Text style={defaultStyles.textLink}>Already have an account? Login</Text>
           </TouchableOpacity>
         </Link>
         <View style={{ flex: 1 }} />
         <TouchableOpacity
           disabled={!mobileNumber}
           onPress={onSignup}
-          style={[
-            defaultStyles.pillButton,
-            mobileNumber ? styles.enabled : styles.disabled,
-            { marginBottom: 20 },
-          ]}
+          style={[defaultStyles.pillButton, mobileNumber ? styles.enabled : styles.disabled, { marginBottom: 20 }]}
         >
           <Text style={defaultStyles.buttonText}>Signup</Text>
         </TouchableOpacity>
