@@ -158,7 +158,7 @@ const RootLayoutNav = () => {
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <ClerkLoaded>
           {/* <Slot /> */}
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <InitialLayout />
         </ClerkLoaded>
       </ClerkProvider>

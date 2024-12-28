@@ -1,5 +1,5 @@
-import DropDown from "@/app/components/Dropdown";
-import RoundedButton from "@/app/components/RoundedButton";
+import DropDown from "@/components/Dropdown";
+import RoundedButton from "@/components/RoundedButton";
 import WidgetList from "@/components/SortableList/WidgetList";
 import Colors from "@/constants/Colors";
 import { defaultStyles } from "@/constants/Styles";

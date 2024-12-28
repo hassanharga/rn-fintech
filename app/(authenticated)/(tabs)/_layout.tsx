@@ -1,4 +1,4 @@
-import CustomHeader from "@/app/components/CustomHeader";
+import CustomHeader from "@/components/CustomHeader";
 import Colors from "@/constants/Colors";
 import { FontAwesome } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
