@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import { Dimensions, StyleSheet } from "react-native";
-import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler";
+import { PanGestureHandler, PanGestureHandlerGestureEvent } from "react-native-gesture-handler";
 import Animated, {
   AnimatedRef,
   runOnJS,
@@ -124,11 +124,9 @@ const Item = ({ children, positions, id, onDragEnd, scrollView, scrollY, editing
   });
   return (
     <Animated.View style={style}>
-      <GestureHandlerRootView>
-        <PanGestureHandler enabled={editing} onGestureEvent={onGestureEvent}>
-          <Animated.View style={StyleSheet.absoluteFill}>{children}</Animated.View>
-        </PanGestureHandler>
-      </GestureHandlerRootView>
+      <PanGestureHandler enabled={editing} onGestureEvent={onGestureEvent}>
+        <Animated.View style={StyleSheet.absoluteFill}>{children}</Animated.View>
+      </PanGestureHandler>
     </Animated.View>
   );
 };

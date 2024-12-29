@@ -1,7 +1,9 @@
 import Colors from "@/constants/Colors";
+import { UserInactivityProvider } from "@/context/UserInactivity";
 import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Link, Stack, useRouter, useSegments } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -9,7 +11,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
+
+const queryClient = new QueryClient();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -72,15 +77,19 @@ const InitialLayout = () => {
   }, [loaded]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    const interval = setTimeout(() => {
+      if (!isLoaded) return;
+      console.log("isSignedIn :>> ", isSignedIn);
+      const inAuthGroup = segments[0] === "(authenticated)";
 
-    const inAuthGroup = segments[0] === "(authenticated)";
+      if (isSignedIn && !inAuthGroup) {
+        router.replace("/(authenticated)/(tabs)/home");
+      } else if (!isSignedIn) {
+        router.replace("/");
+      }
+    }, 50);
 
-    if (isSignedIn && !inAuthGroup) {
-      router.replace("/(authenticated)/(tabs)/home");
-    } else if (!isSignedIn) {
-      router.replace("/");
-    }
+    return () => clearInterval(interval);
   }, [isSignedIn]);
 
   if (!loaded || !isLoaded) {
@@ -148,6 +157,47 @@ const InitialLayout = () => {
       ></Stack.Screen>
       {/* tabs */}
       <Stack.Screen name="(authenticated)/(tabs)" options={{ headerShown: false }}></Stack.Screen>
+      {/* crypto/id */}
+      <Stack.Screen
+        name="(authenticated)/crypto/[id]"
+        options={{
+          title: "",
+          headerLeft: () => (
+            <TouchableOpacity onPress={router.back}>
+              <Ionicons name="arrow-back" size={34} color={Colors.dark} />
+            </TouchableOpacity>
+          ),
+          headerLargeTitle: true,
+          headerTransparent: true,
+          headerRight: () => (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity>
+                <Ionicons name="notifications-outline" color={Colors.dark} size={30} />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Ionicons name="star-outline" color={Colors.dark} size={30} />
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
+      />
+      {/* lock */}
+      <Stack.Screen name="(authenticated)/(modals)/lock" options={{ headerShown: false, animation: "none" }} />
+      {/* account */}
+      <Stack.Screen
+        name="(authenticated)/(modals)/account"
+        options={{
+          presentation: "transparentModal",
+          animation: "fade",
+          title: "",
+          headerTransparent: true,
+          headerLeft: () => (
+            <TouchableOpacity onPress={router.back}>
+              <Ionicons name="close-outline" size={34} color={"#fff"} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     </Stack>
   );
 };
@@ -156,11 +206,17 @@ const RootLayoutNav = () => {
   return (
     <>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <ClerkLoaded>
-          {/* <Slot /> */}
-          <StatusBar style="dark" />
-          <InitialLayout />
-        </ClerkLoaded>
+        <QueryClientProvider client={queryClient}>
+          <ClerkLoaded>
+            <UserInactivityProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <StatusBar style="dark" />
+                <InitialLayout />
+              </GestureHandlerRootView>
+            </UserInactivityProvider>
+            {/* <Slot /> */}
+          </ClerkLoaded>
+        </QueryClientProvider>
       </ClerkProvider>
     </>
   );
